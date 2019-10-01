@@ -2,6 +2,9 @@ SCREEN_HEIGHT = 480
 SCREEN_WIDTH = 320
 MAX_METEORS = 12
 GAMEOVER = false
+HIT_METEORS = 0
+QUANTITY_METEORS = 10
+WINNER = false
 
 airplane_14bis = {
     src = "imagens/14bis.png",
@@ -15,7 +18,12 @@ airplane_14bis = {
 meteors = {}
 
 function shoot()
-    music_shot:play()
+    if WINNER == true then
+        music_shot:stop() 
+    else
+        music_shot:play()
+    end
+
     local shot = {
         x = airplane_14bis.x + airplane_14bis.width/2,
         y = airplane_14bis.y,
@@ -121,6 +129,8 @@ function checkCollisionWithShots()
             if hasCollision(airplane_14bis.shots[i].x, airplane_14bis.shots[i].y, 
                             airplane_14bis.shots[i].width, airplane_14bis.shots[i].height,
                             meteors[j].x, meteors[j].y, meteors[j].width, meteors[j].height) then
+                HIT_METEORS = HIT_METEORS + 1
+
                 table.remove(airplane_14bis.shots, i)
                 table.remove(meteors, j)
                 break
@@ -134,6 +144,14 @@ function checkCollision()
     checkCollisionWithShots()
 end
 
+function winTheGame()
+    if HIT_METEORS >= QUANTITY_METEORS then
+        WINNER = true
+        music_winner:play()
+        music_game:stop()
+    end
+end
+
 function love.load()
     love.window.setMode(SCREEN_WIDTH, SCREEN_HEIGHT, { resizable=false })
     love.window.setTitle("14bis vs meteors")
@@ -142,6 +160,7 @@ function love.load()
 
     background = love.graphics.newImage("imagens/background.png")
     gameover_img = love.graphics.newImage("imagens/gameover.png")
+    winner_img = love.graphics.newImage("imagens/vencedor.png")
 
     airplane_14bis.image = love.graphics.newImage(airplane_14bis.src)
     meteor_img = love.graphics.newImage("imagens/meteoro.png")
@@ -154,12 +173,13 @@ function love.load()
     music_destroy = love.audio.newSource("audios/destruicao.wav", "static")
     music_gameover = love.audio.newSource("audios/game_over.wav", "static")
     music_shot = love.audio.newSource("audios/disparo.wav", "static")
+    music_winner = love.audio.newSource("audios/winner.wav", "static")
 
 
 end
 
 function love.update(dt)
-    if not GAMEOVER then
+    if not GAMEOVER and not WINNER then
         if love.keyboard.isDown('w', 'a', 'd', 's') then
             move14bis()
         end
@@ -172,6 +192,7 @@ function love.update(dt)
         moveMeteors()
         moveShots()
         checkCollision()
+        winTheGame()
     end
 end
 
@@ -187,6 +208,7 @@ function love.draw()
     love.graphics.draw(background, 0, 0)
     love.graphics.draw(airplane_14bis.image, airplane_14bis.x, airplane_14bis.y)
     
+    love.graphics.print("Remaining meteors " .. QUANTITY_METEORS - HIT_METEORS, 1, 1)
     for k, meteor in pairs(meteors) do
         love.graphics.draw(meteor_img, meteor.x, meteor.y)
     end
@@ -197,5 +219,10 @@ function love.draw()
 
     if GAMEOVER then
         love.graphics.draw(gameover_img, SCREEN_WIDTH/2 - (gameover_img:getWidth()/2), SCREEN_HEIGHT/2 - (gameover_img:getHeight()/2))
+    end
+
+    if WINNER then 
+        love.graphics.draw(winner_img, SCREEN_WIDTH/2 - (winner_img:getWidth()/2), SCREEN_HEIGHT/2 - (winner_img:getHeight()/2))
+
     end
 end
