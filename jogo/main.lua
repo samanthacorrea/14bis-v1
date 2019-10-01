@@ -8,18 +8,41 @@ airplane_14bis = {
     width = 55,
     height = 63,
     x = SCREEN_WIDTH/2 - 64/2,
-    y = SCREEN_HEIGHT - 66
+    y = SCREEN_HEIGHT - 66,
+    shots = {},
 }
 
 meteors = {}
 
+function shoot()
+    music_shot:play()
+    local shot = {
+        x = airplane_14bis.x + airplane_14bis.width/2,
+        y = airplane_14bis.y,
+        width = 16,
+        height = 16,
+    }
+
+    table.insert(airplane_14bis.shots, shot)
+end
+
+function moveShots()
+    for i = #airplane_14bis.shots, 1, -1 do
+        if airplane_14bis.shots[i].y > 0 then
+            airplane_14bis.shots[i].y = airplane_14bis.shots[i].y - 1
+        else
+            table.remove(airplane_14bis.shots, i)
+        end
+    end
+end
+
 function destroyAirplane()
+    music_destroy:play()
     airplane_14bis.src = "imagens/explosao_nave.png"
     airplane_14bis.image = love.graphics.newImage(airplane_14bis.src)
     airplane_14bis.width = 67
     airplane_14bis.height = 77
     GAMEOVER = true
-
 end
 
 function hasCollision(X1, Y1, L1, A1, X2, Y2, L2, A2)
@@ -29,13 +52,6 @@ function hasCollision(X1, Y1, L1, A1, X2, Y2, L2, A2)
            Y2 < Y1 + A1
 end
 
-function checkCollision()
-    for k, meteor in pairs(meteors) do
-        if hasCollision(meteor.x, meteor.y, meteor.width, meteor.height, airplane_14bis.x, airplane_14bis.y, airplane_14bis.width, airplane_14bis.height) then
-            destroyAirplane()
-        end
-    end
-end
 function removeMeteors()
     for i = #meteors, 1, -1 do
         if meteors[i].y > SCREEN_HEIGHT then
@@ -82,6 +98,42 @@ function move14bis()
     end
 end
 
+function changeMusic()
+    music_game:stop()
+    music_gameover:play()
+end
+
+function checkCollisionWithAirplane()
+    for k, meteor in pairs(meteors) do
+        if hasCollision(meteor.x, meteor.y, meteor.width, meteor.height, 
+                        airplane_14bis.x, airplane_14bis.y, airplane_14bis.width, 
+                        airplane_14bis.height) then
+            changeMusic()
+            destroyAirplane()
+            GAMEOVER = true
+        end
+    end
+end
+
+function checkCollisionWithShots()
+    for i = #airplane_14bis.shots, 1, -1 do
+        for j = #meteors, 1, -1 do
+            if hasCollision(airplane_14bis.shots[i].x, airplane_14bis.shots[i].y, 
+                            airplane_14bis.shots[i].width, airplane_14bis.shots[i].height,
+                            meteors[j].x, meteors[j].y, meteors[j].width, meteors[j].height) then
+                table.remove(airplane_14bis.shots, i)
+                table.remove(meteors, j)
+                break
+            end
+        end
+    end
+end
+
+function checkCollision()
+    checkCollisionWithAirplane()
+    checkCollisionWithShots()
+end
+
 function love.load()
     love.window.setMode(SCREEN_WIDTH, SCREEN_HEIGHT, { resizable=false })
     love.window.setTitle("14bis vs meteors")
@@ -89,9 +141,19 @@ function love.load()
     math.randomseed(os.time())
 
     background = love.graphics.newImage("imagens/background.png")
-    airplane_14bis.image = love.graphics.newImage(airplane_14bis.src)
+    gameover_img = love.graphics.newImage("imagens/gameover.png")
 
+    airplane_14bis.image = love.graphics.newImage(airplane_14bis.src)
     meteor_img = love.graphics.newImage("imagens/meteoro.png")
+    shot_img = love.graphics.newImage("imagens/tiro.png")
+
+    music_game = love.audio.newSource("audios/ambiente.wav", "static")
+    music_game:setLooping(true)
+    music_game:play()
+
+    music_destroy = love.audio.newSource("audios/destruicao.wav", "static")
+    music_gameover = love.audio.newSource("audios/game_over.wav", "static")
+    music_shot = love.audio.newSource("audios/disparo.wav", "static")
 
 
 end
@@ -108,7 +170,16 @@ function love.update(dt)
             createMeteor()
         end
         moveMeteors()
+        moveShots()
         checkCollision()
+    end
+end
+
+function love.keypressed(key)
+    if key == "escape" then
+        love.event.quit()
+    elseif key == "space" then
+        shoot()
     end
 end
 
@@ -120,4 +191,11 @@ function love.draw()
         love.graphics.draw(meteor_img, meteor.x, meteor.y)
     end
 
+    for k, shot in pairs(airplane_14bis.shots) do
+        love.graphics.draw(shot_img, shot.x, shot.y)
+    end
+
+    if GAMEOVER then
+        love.graphics.draw(gameover_img, SCREEN_WIDTH/2 - (gameover_img:getWidth()/2), SCREEN_HEIGHT/2 - (gameover_img:getHeight()/2))
+    end
 end
